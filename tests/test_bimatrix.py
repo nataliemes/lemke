@@ -5,7 +5,8 @@
 
     Each test case is verified in 2 ways:
 
-    (1) Checking that the output of LH algorithm matches pre-computed equilibria for LH.
+    (1) Checking that the output of LH algorithm matches pre-computed equilibria for LH
+        and max regret is 0 (or less than the indicated tolerance).
     (2) Checking that the output of both LH and tracing methods
         is a subset of the equilibria computed by pygambit.nash.enummixed_solve().
 """
@@ -82,12 +83,47 @@ def _tracing_solver(G: bimatrix, trace: int = 10, seed: int = -1, accuracy: int 
 
 
 
+def _regret_p1(A: list[F], x: list[F], y: list[F]) -> F:
+    eq = sum(
+        x[i] * sum(A[i][j] * y[j] for j in range(len(y)))
+        for i in range(len(x))
+    )
+
+    best = max(
+        sum(A[i][j] * y[j] for j in range(len(y)))
+        for i in range(len(A))
+    )
+
+    return best - eq
+
+
+def _regret_p2(B: list[F], x: list[F], y: list[F]) -> F:
+    eq = sum(
+        y[j] * sum(x[i] * B[i][j] for i in range(len(x)))
+        for j in range(len(y))
+    )
+
+    best = max(
+        sum(x[i] * B[i][j] for i in range(len(x)))
+        for j in range(len(B[0]))
+    )
+
+    return best - eq
+
+
+def _max_regret(A: list[F], B: list[F], x: list[F], y: list[F]) -> F:
+    return max(_regret_p1(A, x, y), _regret_p2(B, x, y))
+
+
+
+
 @dataclasses.dataclass
 class GameTestCase:
     factory: typing.Callable[[], bimatrix]                                   # returns bimatrix game (A, B)
     solver: typing.Optional[typing.Callable[[], list[list]]] = _LH_solver    # runs game solver & returns equilibria
     expected_LH: typing.Optional[list] = None                                # expected_LH solution for LH solver
-    tol: F = F(0)                                                            # tolerance for checking solution (0 by default)
+    regret_tol: F = F(0)                                                     # tolerance for checking max regret (0 by default)
+    prob_tol: F = F(0)                                                       # tolerance for checking equilibria (0 by default)
 
 
 
@@ -482,13 +518,27 @@ def test_bimatrix_LH_by_expected_results(test_case: GameTestCase, subtests):
     lh_eqs = test_case.solver(G)  # list of equilibria from LH solver
 
     
-    assert len(lh_eqs) == len(test_case.expected_LH)
+    with subtests.test("Number of equilibria"):
+        assert len(lh_eqs) == len(test_case.expected_LH)
+
+    
+    m = G.A.numrows
 
     for eq_idx, (eq, exp) in enumerate(zip(lh_eqs, test_case.expected_LH)):
+
+        x = eq[:m]
+        y = eq[m:]
+
+        # max regret
+        with subtests.test(f"Max regret for equilibria {eq_idx}"):
+            print(_max_regret(G.A.matrix, G.B.matrix, x, y))
+            assert _max_regret(G.A.matrix, G.B.matrix, x, y) <= test_case.regret_tol
+
+        # equilibria
         for comp_idx, (a, b) in enumerate(zip(eq, exp)):
             with subtests.test(f"Eq. {eq_idx}, comp. {comp_idx}"):
-                assert abs(a - b) <= test_case.tol, \
-                    f"Equilibrium {eq_idx}, component {comp_idx}: actual {a}, expected {b} (tol={test_case.tol})"
+                assert abs(a - b) <= test_case.prob_tol, \
+                    f"Equilibrium {eq_idx}, component {comp_idx}: actual {a}, expected {b} (tol={test_case.prob_tol})"
 
 
 
@@ -506,12 +556,12 @@ def test_bimatrix_with_pygambit(test_case: GameTestCase, solver, subtests):
     """ Tests both LH and tracing methods against pygambit solutions. """
     
     G = test_case.factory()
-    lh_eqs = solver(G)
+    eqs = solver(G)
 
     # building the pygambit game
-    A = [[float(x) for x in row] for row in G.A.matrix]
-    B = [[float(x) for x in row] for row in G.B.matrix]
-    g = pygambit.Game.new_table([len(A), len(A[0])])
+    A = G.A.matrix
+    B = G.B.matrix
+    g = pygambit.Game.new_table([G.A.numrows, G.A.numcolumns])
     p1, p2 = g.players
     for i, row in enumerate(A):
         for j, val in enumerate(row):
@@ -521,22 +571,22 @@ def test_bimatrix_with_pygambit(test_case: GameTestCase, solver, subtests):
 
     # getting the pygambit results
     # enummixed_solve() is used to get all equilibria
-    pyg_eqs = []
+    pygambit_eqs = []
     for eq in pygambit.nash.enummixed_solve(g, rational=True).equilibria:
         flat_eq = [s[1] for s in eq[p1]] + [s[1] for s in eq[p2]]
-        pyg_eqs.append([F(x) for x in flat_eq])  # convert to Fraction (otherwise it's Rational)
+        pygambit_eqs.append([F(x) for x in flat_eq])  # convert to Fraction (otherwise it's Rational)
     
 
-    # print("PYGAMBIT EQUILIBRIA:  ", pyg_eqs)
-    # print("OUTPUTTED EQUILIBRIA: ", lh_eqs)
+    # print("PYGAMBIT EQUILIBRIA:  ", pygambit_eqs)
+    # print("OUTPUTTED EQUILIBRIA: ", eqs)
 
 
-    # each equilibrium LH found should appear in equilibria that pygambit found
-    for idx, eq in enumerate(lh_eqs):
+    # each equilibrium found by LH or tracing should appear in equilibria that pygambit found
+    for idx, eq in enumerate(eqs):
         with subtests.test(f"Equilibrium {idx} pygambit check"):
             matched = any(
-                all(abs(a - b) <= test_case.tol for a, b in zip(eq, ne))
-                for ne in pyg_eqs
+                all(abs(a - b) <= test_case.prob_tol for a, b in zip(eq, ne))
+                for ne in pygambit_eqs
             )
             assert matched, f"Equilibrium not in pygambit set: {eq}"
 

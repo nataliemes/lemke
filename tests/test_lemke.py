@@ -384,7 +384,8 @@ def test_lemke_by_expected_results(test_case: LCPTestCase, subtests):
 
     # print(sol)
 
-    assert len(sol) == 2*n + 1
+    with subtests.test(f"Solution length"):
+        assert len(sol) == 2*n + 1
 
     for i, val in enumerate(sol):
 
