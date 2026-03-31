@@ -18,13 +18,13 @@ import pytest
 import random
 import pygambit
 
-from lemke.bimatrix import bimatrix, payoffmatrix, uniform
-from lemke import randomstart
-from fractions import Fraction as F
+from src.lemke.bimatrix import bimatrix, payoffmatrix, uniform
+from src.lemke import randomstart
+from fractions import Fraction as Fr
 
 
 
-def _bimatrix_from_data(A: list[F], B: list[F]) -> bimatrix:
+def bimatrix_from_data(A: list[Fr], B: list[Fr]) -> bimatrix:
 
     """ Creates a bimatrix instance with given A and B. """
 
@@ -32,7 +32,7 @@ def _bimatrix_from_data(A: list[F], B: list[F]) -> bimatrix:
     # can accept A, B directly instead of reading values from a file.
 
     def to_frac_matrix(M):
-        return [[F(int(x)) for x in row] for row in M]
+        return [[Fr(int(x)) for x in row] for row in M]
     
     G = bimatrix.__new__(bimatrix)
     G.A = payoffmatrix(to_frac_matrix(A))
@@ -40,7 +40,7 @@ def _bimatrix_from_data(A: list[F], B: list[F]) -> bimatrix:
     return G
 
 
-def _LH_solver(G: bimatrix) -> list[list[F]]:
+def LH_solver(G: bimatrix) -> list[list[Fr]]:
 
     """ Run LH algorithm & return the list of equilibria found. """
 
@@ -48,7 +48,7 @@ def _LH_solver(G: bimatrix) -> list[list[F]]:
     return [list(eq_key) for eq_key in lh_eqs_dict.keys()]
 
 
-def _tracing_solver(G: bimatrix, trace: int = 10, seed: int = -1, accuracy: int = 1000) -> list[list[F]]:
+def tracing_solver(G: bimatrix, trace: int = 10, seed: int = -1, accuracy: int = 1000) -> list[list[Fr]]:
     
     """ Run tracing & return the list of equilibria found. """
     
@@ -82,37 +82,18 @@ def _tracing_solver(G: bimatrix, trace: int = 10, seed: int = -1, accuracy: int 
     return [list(eq) for eq in trset.keys()]
 
 
+def build_pygambit_bimatrix_game(G: bimatrix) -> pygambit.gambit.Game:
+    A = G.A.matrix
+    B = G.B.matrix
+    g = pygambit.Game.new_table([G.A.numrows, G.A.numcolumns])
+    p1, p2 = g.players
+    for i, row in enumerate(A):
+        for j, val in enumerate(row):
+            g[i, j][p1] = Fr(val)
+            g[i, j][p2] = Fr(B[i][j])
+    
+    return g
 
-def _regret_p1(A: list[F], x: list[F], y: list[F]) -> F:
-    eq = sum(
-        x[i] * sum(A[i][j] * y[j] for j in range(len(y)))
-        for i in range(len(x))
-    )
-
-    best = max(
-        sum(A[i][j] * y[j] for j in range(len(y)))
-        for i in range(len(A))
-    )
-
-    return best - eq
-
-
-def _regret_p2(B: list[F], x: list[F], y: list[F]) -> F:
-    eq = sum(
-        y[j] * sum(x[i] * B[i][j] for i in range(len(x)))
-        for j in range(len(y))
-    )
-
-    best = max(
-        sum(x[i] * B[i][j] for i in range(len(x)))
-        for j in range(len(B[0]))
-    )
-
-    return best - eq
-
-
-def _max_regret(A: list[F], B: list[F], x: list[F], y: list[F]) -> F:
-    return max(_regret_p1(A, x, y), _regret_p2(B, x, y))
 
 
 
@@ -120,10 +101,10 @@ def _max_regret(A: list[F], B: list[F], x: list[F], y: list[F]) -> F:
 @dataclasses.dataclass
 class GameTestCase:
     factory: typing.Callable[[], bimatrix]                                   # returns bimatrix game (A, B)
-    solver: typing.Optional[typing.Callable[[], list[list]]] = _LH_solver    # runs game solver & returns equilibria
+    solver: typing.Optional[typing.Callable[[], list[list]]] = LH_solver     # runs game solver & returns equilibria
     expected_LH: typing.Optional[list] = None                                # expected_LH solution for LH solver
-    regret_tol: F = F(0)                                                     # tolerance for checking max regret (0 by default)
-    prob_tol: F = F(0)                                                       # tolerance for checking equilibria (0 by default)
+    regret_tol: Fr = Fr(0)                                                   # tolerance for checking max regret (0 by default)
+    prob_tol: Fr = Fr(0)                                                     # tolerance for checking equilibria (0 by default)
 
 
 
@@ -132,7 +113,7 @@ class GameTestCase:
 SINGLE_STRATEGY_GAMES = [
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [3]
                 ],
@@ -140,14 +121,14 @@ SINGLE_STRATEGY_GAMES = [
                     [5]
                 ]
             ),
-            expected_LH=[[F(1), F(1)]]
+            expected_LH=[[Fr(1), Fr(1)]]
         ),
         id="single_strategy_game_1x1"
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1, 2]
                 ],
@@ -155,14 +136,14 @@ SINGLE_STRATEGY_GAMES = [
                     [3, 4]
                 ]
             ),
-            expected_LH=[[F(1), F(0), F(1)]]
+            expected_LH=[[Fr(1), Fr(0), Fr(1)]]
         ),
         id="single_strategy_game_1x2"
     ),
 
      pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1],
                     [2]
@@ -172,7 +153,7 @@ SINGLE_STRATEGY_GAMES = [
                     [4]
                 ]
             ),
-            expected_LH=[[F(0), F(1), F(1)]]
+            expected_LH=[[Fr(0), Fr(1), Fr(1)]]
         ),
         id="single_strategy_game_2x1"
     ),
@@ -186,7 +167,7 @@ DOMINANT_STRATEGY_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [3, 0],
                     [5, 1]
@@ -196,14 +177,14 @@ DOMINANT_STRATEGY_GAMES = [
                     [0, 1]
                 ]
             ),
-            expected_LH=[[F(0), F(1), F(0), F(1)]]
+            expected_LH=[[Fr(0), Fr(1), Fr(0), Fr(1)]]
         ),
         id="dominant_1_prisoners_dilemma"
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [3, 1],
                     [4, 2]
@@ -213,14 +194,14 @@ DOMINANT_STRATEGY_GAMES = [
                     [1, 4]
                 ]
             ),
-            expected_LH=[[F(0), F(1), F(0), F(1)]]
+            expected_LH=[[Fr(0), Fr(1), Fr(0), Fr(1)]]
         ),
         id="dominant_2"
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1, 0, 0],
                     [2, 1, 0],
@@ -232,7 +213,7 @@ DOMINANT_STRATEGY_GAMES = [
                     [0, 0, 1]
                 ]
             ),
-            expected_LH=[[F(0), F(0), F(1), F(0), F(0), F(1)]]
+            expected_LH=[[Fr(0), Fr(0), Fr(1), Fr(0), Fr(0), Fr(1)]]
         ),
         id="dominant_3"
     ),
@@ -248,7 +229,7 @@ ZERO_SUM_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1, 0],
                     [0, 1]
@@ -259,14 +240,14 @@ ZERO_SUM_GAMES = [
                     [0, -1]
                 ]
             ),
-            expected_LH=[[F(1, 2), F(1, 2), F(1, 2), F(1, 2)]]
+            expected_LH=[[Fr(1, 2), Fr(1, 2), Fr(1, 2), Fr(1, 2)]]
         ),
         id="zero_sum_game_1"
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1,-1],
                     [-1,1]
@@ -276,7 +257,7 @@ ZERO_SUM_GAMES = [
                     [1,-1]
                 ]
             ),
-            expected_LH=[[F(1, 2), F(1, 2), F(1, 2), F(1, 2)]]
+            expected_LH=[[Fr(1, 2), Fr(1, 2), Fr(1, 2), Fr(1, 2)]]
         ),
         id="zero_sum_game_2_matching_pennies"
     ),
@@ -284,7 +265,7 @@ ZERO_SUM_GAMES = [
     
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [0, 1, -1],
                     [-1, 0, 1],
@@ -296,7 +277,7 @@ ZERO_SUM_GAMES = [
                     [-1, 1, 0]
                 ]
             ),
-            expected_LH=[[F(1, 3), F(1, 3), F(1, 3), F(1, 3), F(1, 3), F(1, 3)]]
+            expected_LH=[[Fr(1, 3), Fr(1, 3), Fr(1, 3), Fr(1, 3), Fr(1, 3), Fr(1, 3)]]
         ),
         id="zero_sum_game_3_rock_paper_scissors"
     ),
@@ -304,7 +285,7 @@ ZERO_SUM_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [2, -1, 0],
                     [-2, 1, 0]
@@ -315,8 +296,8 @@ ZERO_SUM_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1, 2), F(1, 2), F(0), F(0), F(1)],
-                [F(1, 2), F(1, 2), F(1, 3), F(2, 3), F(0)]
+                [Fr(1, 2), Fr(1, 2), Fr(0), Fr(0), Fr(1)],
+                [Fr(1, 2), Fr(1, 2), Fr(1, 3), Fr(2, 3), Fr(0)]
             ]
         ),
         id="zero_sum_game_4"
@@ -333,7 +314,7 @@ COORDINATION_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [8, 0],
                     [0, 8]
@@ -344,8 +325,8 @@ COORDINATION_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1), F(0), F(1), F(0)],
-                [F(0), F(1), F(0), F(1)]
+                [Fr(1), Fr(0), Fr(1), Fr(0)],
+                [Fr(0), Fr(1), Fr(0), Fr(1)]
             ]
         ),
         id="coordination_game_1_pure"
@@ -354,7 +335,7 @@ COORDINATION_GAMES = [
     
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [3, 0],
                     [0, 2]
@@ -365,8 +346,8 @@ COORDINATION_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1), F(0), F(1), F(0)],
-                [F(0), F(1), F(0), F(1)]
+                [Fr(1), Fr(0), Fr(1), Fr(0)],
+                [Fr(0), Fr(1), Fr(0), Fr(1)]
             ]
         ),
         id="coordination_game_2_battle_of_the_sexes"
@@ -374,7 +355,7 @@ COORDINATION_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [8, 0],
                     [0, 5]
@@ -385,8 +366,8 @@ COORDINATION_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1), F(0), F(1), F(0)],
-                [F(0), F(1), F(0), F(1)]
+                [Fr(1), Fr(0), Fr(1), Fr(0)],
+                [Fr(0), Fr(1), Fr(0), Fr(1)]
             ]
         ),
         id="coordination_game_3_assurance"
@@ -402,7 +383,7 @@ DEGENERATE_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1, 1],
                     [1, 1]
@@ -413,9 +394,9 @@ DEGENERATE_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1), F(0), F(0), F(1)],
-                [F(0), F(1), F(0), F(1)],
-                [F(0), F(1), F(1), F(0)]
+                [Fr(1), Fr(0), Fr(0), Fr(1)],
+                [Fr(0), Fr(1), Fr(0), Fr(1)],
+                [Fr(0), Fr(1), Fr(1), Fr(0)]
             ]
         ),
         id="degenarate_game_1"
@@ -423,7 +404,7 @@ DEGENERATE_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [1, 1, 1],
                     [2, 2, 2]
@@ -434,9 +415,9 @@ DEGENERATE_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(0), F(1), F(0), F(0), F(1)],
-                [F(0), F(1), F(1), F(0), F(0)],
-                [F(0), F(1), F(0), F(1), F(0)],
+                [Fr(0), Fr(1), Fr(0), Fr(0), Fr(1)],
+                [Fr(0), Fr(1), Fr(1), Fr(0), Fr(0)],
+                [Fr(0), Fr(1), Fr(0), Fr(1), Fr(0)],
             ]
         ),
         id="degenarate_game_2"
@@ -452,7 +433,7 @@ GENERAL_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [2, 3],
                     [2, 1.5],
@@ -467,8 +448,8 @@ GENERAL_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1), F(0), F(0), F(0), F(1), F(0)],
-                [F(1, 2), F(1, 2), F(0), F(0), F(1), F(0)]
+                [Fr(1), Fr(0), Fr(0), Fr(0), Fr(1), Fr(0)],
+                [Fr(1, 2), Fr(1, 2), Fr(0), Fr(0), Fr(1), Fr(0)]
             ]
         ),
         id="general_game_1"
@@ -476,7 +457,7 @@ GENERAL_GAMES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: _bimatrix_from_data(
+            factory=lambda: bimatrix_from_data(
                 A=[
                     [3, 1],
                     [0, 2],
@@ -489,8 +470,8 @@ GENERAL_GAMES = [
                 ]
             ),
             expected_LH=[
-                [F(1), F(0), F(0), F(1), F(0)],
-                [F(0), F(1), F(0), F(0), F(1)]
+                [Fr(1), Fr(0), Fr(0), Fr(1), Fr(0)],
+                [Fr(0), Fr(1), Fr(0), Fr(0), Fr(1)]
             ]
         ),
         id="general_game_2"
@@ -517,6 +498,8 @@ def test_bimatrix_LH_by_expected_results(test_case: GameTestCase, subtests):
     G = test_case.factory()
     lh_eqs = test_case.solver(G)  # list of equilibria from LH solver
 
+    pygambit_game = build_pygambit_bimatrix_game(G)
+
     
     with subtests.test("Number of equilibria"):
         assert len(lh_eqs) == len(test_case.expected_LH)
@@ -529,10 +512,12 @@ def test_bimatrix_LH_by_expected_results(test_case: GameTestCase, subtests):
         x = eq[:m]
         y = eq[m:]
 
+        profile = pygambit_game.mixed_strategy_profile([list(x), list(y)], rational=True)
+
         # max regret
         with subtests.test(f"Max regret for equilibria {eq_idx}"):
-            print(_max_regret(G.A.matrix, G.B.matrix, x, y))
-            assert _max_regret(G.A.matrix, G.B.matrix, x, y) <= test_case.regret_tol
+            max_regret = profile.max_regret()
+            assert max_regret <= test_case.regret_tol
 
         # equilibria
         for comp_idx, (a, b) in enumerate(zip(eq, exp)):
@@ -544,8 +529,8 @@ def test_bimatrix_LH_by_expected_results(test_case: GameTestCase, subtests):
 
 
 SOLVERS = [
-    _LH_solver,
-    _tracing_solver
+    LH_solver,
+    tracing_solver
 ]
 
 
@@ -559,14 +544,8 @@ def test_bimatrix_with_pygambit(test_case: GameTestCase, solver, subtests):
     eqs = solver(G)
 
     # building the pygambit game
-    A = G.A.matrix
-    B = G.B.matrix
-    g = pygambit.Game.new_table([G.A.numrows, G.A.numcolumns])
+    g = build_pygambit_bimatrix_game(G)
     p1, p2 = g.players
-    for i, row in enumerate(A):
-        for j, val in enumerate(row):
-            g[i, j][p1] = F(val)
-            g[i, j][p2] = F(B[i][j])
 
 
     # getting the pygambit results
@@ -574,7 +553,7 @@ def test_bimatrix_with_pygambit(test_case: GameTestCase, solver, subtests):
     pygambit_eqs = []
     for eq in pygambit.nash.enummixed_solve(g, rational=True).equilibria:
         flat_eq = [s[1] for s in eq[p1]] + [s[1] for s in eq[p2]]
-        pygambit_eqs.append([F(x) for x in flat_eq])  # convert to Fraction (otherwise it's Rational)
+        pygambit_eqs.append([Fr(x) for x in flat_eq])  # convert to Fraction (otherwise it's Rational)
     
 
     # print("PYGAMBIT EQUILIBRIA:  ", pygambit_eqs)
