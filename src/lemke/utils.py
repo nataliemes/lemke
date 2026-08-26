@@ -1,6 +1,11 @@
 # file utilities
 
 import fractions
+from decimal import (
+    ROUND_HALF_UP,
+    Decimal,
+    InvalidOperation,
+)
 
 import numpy as np
 
@@ -49,20 +54,31 @@ def towords(lines):
     return words
 
 
-# convert s to fraction
-# if s contains ".": convert to decimal fraction
-# (numerator deciDenom)
-def tofraction(s, decimals):
-    deciDenom = 10 ** decimals
-    if isinstance(s, str) and "." in s:
-        s = float(s)
-    if isinstance(s, float):
-        num = int(abs(s) * deciDenom + 0.5)  # round .5 away from zero
-        if s < 0:
-            num = -num
-        return fractions.Fraction(num, deciDenom)
-    # any other s than a float or string containing '.':
-    return fractions.Fraction(s)
+def tofraction(s: str, decimals: int) -> fractions.Fraction:
+    """Convert a string to an exact Fraction.
+
+    If `s` contains '.', it's treated as a decimal literal and
+    rounded to `decimals` places (half away from zero).
+    Otherwise, it's parsed as an integer or 'p/q' fraction string.
+    """
+    if not isinstance(s, str):
+        raise TypeError(
+            f"to_fraction expects a string, got {type(s).__name__}: {s!r}"
+        )
+
+    if "." in s:
+        try:
+            d = Decimal(s)
+        except InvalidOperation as e:
+            raise ValueError(f"{s!r} is not a valid decimal number") from e
+        denominator = 10 ** decimals
+        scaled = (d * denominator).to_integral_value(rounding=ROUND_HALF_UP)
+        return fractions.Fraction(int(scaled), denominator)
+
+    try:
+        return fractions.Fraction(s)
+    except (ValueError, ZeroDivisionError) as e:
+        raise ValueError(f"{s!r} is not a valid number or fraction: {e}") from e
 
 
 # create n-vector of fractions from words[start,start+n)
