@@ -4,7 +4,6 @@ from fractions import Fraction
 import pytest
 from click.testing import CliRunner
 
-from lemke import utils
 from lemke.bimatrix import (
     bimatrix,
     lh,
@@ -83,7 +82,6 @@ def test_addcolumn_updates_shape_max_min(small_payoff_matrix):
 # ---   BIMATRIX INIT   --------------------------------------------------
 @pytest.fixture
 def small_game_file(tmp_path):
-    utils.setdecimals(4)
     content = textwrap.dedent("""
         2 2
 

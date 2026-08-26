@@ -1,5 +1,4 @@
 # file utilities
-# tofraction utilities with global decimals
 
 import fractions
 
@@ -7,24 +6,21 @@ import numpy as np
 
 # global constants, mutable
 # https://stackoverflow.com/questions/1977362/how-to-create-module-wide-variables-in-python
-decimals = 4
-deciDenom = 10 ** decimals
+DEFAULT_DECIMALS = 4
 MAXDECIMALS = 20
 # roundingwarn = False
 
 
-def setdecimals(n):
-    global decimals, deciDenom
-    if 0 <= n <= MAXDECIMALS:
-        decimals = n
-        deciDenom = 10 ** decimals
-    else:
-        # if roundingwarn:
-        print(n, "as number of decimals not in allowed range 0 to", MAXDECIMALS)
-    return
-
-
 commentchars = "#%*"  # lines starting with these are ignored
+
+
+def validate_decimals(decimals):
+    if not isinstance(decimals, int):
+        raise TypeError("decimals must be an integer")
+    if decimals < 0 or decimals > MAXDECIMALS:
+        raise ValueError(
+            f"{decimals} as number of decimals not in allowed range 0 to {MAXDECIMALS}"
+        )
 
 
 # read file into list of line-strings
@@ -56,7 +52,8 @@ def towords(lines):
 # convert s to fraction
 # if s contains ".": convert to decimal fraction
 # (numerator deciDenom)
-def tofraction(s):
+def tofraction(s, decimals):
+    deciDenom = 10 ** decimals
     if isinstance(s, str) and "." in s:
         s = float(s)
     if isinstance(s, float):
@@ -69,19 +66,19 @@ def tofraction(s):
 
 
 # create n-vector of fractions from words[start,start+n)
-def tovector(n, words, start):
+def tovector(n, words, start, decimals):
     vector = np.zeros(n, dtype=fractions.Fraction)
     for i in range(n):
-        vector[i] = tofraction(words[start + i])
+        vector[i] = tofraction(words[start + i], decimals)
     return vector
 
 
 # create (m,n)-matrix of fractions from words[start,start+m*n)
-def tomatrix(m, n, words, start):
+def tomatrix(m, n, words, start, decimals):
     C = np.zeros((m, n), dtype=fractions.Fraction)
     k = start
     for i in range(m):
         for j in range(n):
-            C[i][j] = tofraction(words[k])
+            C[i][j] = tofraction(words[k], decimals)
             k += 1
     return C
