@@ -44,14 +44,13 @@ def rangesplit(s, endrange=50):
 class payoffmatrix:
     # create matrix from any numerical matrix
     def __init__(self, A):
-        AA = np.array(A)
+        AA = np.array(A, dtype=object)
+        if not all(isinstance(x, fractions.Fraction) for x in AA.flat):
+            raise TypeError("matrix must contain only Fraction values")
         m, n = AA.shape
         self.numrows = m
         self.numcolumns = n
-        self.matrix = np.zeros((m, n), dtype=fractions.Fraction)
-        for i in range(m):
-            for j in range(n):
-                self.matrix[i][j] = utils.tofraction(AA[i][j], utils.DEFAULT_DECIMALS)
+        self.matrix = AA
         self.fullmaxmin()
 
     def __str__(self):

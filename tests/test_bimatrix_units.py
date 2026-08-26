@@ -23,8 +23,8 @@ from lemke.utils import MAXDECIMALS
 @pytest.fixture
 def small_payoff_matrix():
     return payoffmatrix([
-        [1, 2],
-        [3, 4],
+        [Fraction(1), Fraction(2)],
+        [Fraction(3), Fraction(4)],
     ])
 
 
