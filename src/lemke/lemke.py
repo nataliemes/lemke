@@ -458,14 +458,14 @@ class PrintingCallback(LemkeCallback):
         self.printout(result)
 
 
-@dataclass
+@dataclass(frozen=True)
 class LcpResult:
     success: bool
     num_pivots: int
-    basis: set[str]  # e.g. {'w1', 'z2', ...}
+    basis: frozenset[str]  # e.g. {'w1', 'z2', ...}
     z0: fractions.Fraction
-    z: list[fractions.Fraction]  # [z1, ..., zn]
-    w: list[fractions.Fraction]  # [w1, ..., wn]
+    z: tuple[fractions.Fraction, ...]  # (z1, ..., zn)
+    w: tuple[fractions.Fraction, ...]  # (w1, ..., wn)
 
     def __str__(self):
         # printout in columns to check complementarity
@@ -519,10 +519,10 @@ def result_from_tableau(
     return LcpResult(
         success=success,
         num_pivots=tableau.pivotcount,
-        basis=basis,
+        basis=frozenset(basis),
         z0=solution[0],
-        z=solution[1:n + 1],
-        w=solution[n + 1:],
+        z=tuple(solution[1:n + 1]),
+        w=tuple(solution[n + 1:]),
     )
 
 
@@ -534,10 +534,10 @@ def runlemke(*, lcp, callback=None):
         return LcpResult(
             success=True,
             num_pivots=0,
-            basis={f"w{i + 1}" for i in range(lcp.n)},
+            basis=frozenset(f"w{i + 1}" for i in range(lcp.n)),
             z0=fractions.Fraction(0),
-            z=[fractions.Fraction(0) for _ in range(lcp.n)],
-            w=lcp.q,
+            z=(fractions.Fraction(0),) * lcp.n,
+            w=tuple(lcp.q),
         )
 
     try:
