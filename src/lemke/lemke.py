@@ -454,7 +454,6 @@ class PrintingCallback(LemkeCallback):
     def on_ray_termination(self, tableau, result, message):
         self.printout(message)
         self.printout(tableau)
-        self.printout("Current basis not an LCP solution:")
         self.printout(result)
 
 
@@ -468,6 +467,19 @@ class LcpResult:
     w: tuple[fractions.Fraction, ...]  # (w1, ..., wn)
 
     def __str__(self):
+        pivot_word = "pivot" if self.num_pivots == 1 else "pivots"
+
+        if self.success:
+            status = (
+                f"Process finished successfully after {self.num_pivots} {pivot_word}.\n"
+                "Solution found:\n"
+            )
+        else:
+            status = (
+                f"Terminated on a secondary ray after {self.num_pivots} {pivot_word}.\n"
+                "Current basis not an LCP solution:\n"
+            )
+
         # printout in columns to check complementarity
         n = len(self.w)
 
@@ -489,7 +501,7 @@ class LcpResult:
         for el in self.w:
             sol.sprint(str(el))
 
-        return str(sol)
+        return status + str(sol)
 
 
 def result_from_tableau(
