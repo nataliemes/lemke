@@ -79,6 +79,10 @@ class TestRoundArrayFailure:
         with pytest.raises(ValueError, match="accuracy must be between"):
             roundArray([0.5, 0.5], accuracy=bad_accuracy)
 
+    def test_accuracy_not_integer(self):
+        with pytest.raises(TypeError, match="accuracy must be an integer"):
+            roundArray([0.5, 0.5], accuracy=2.5)
+
     def test_invalid_probabilities(self):
         with pytest.raises(ValueError, match="need probabilities"):
             roundArray([1.0, 1.0])

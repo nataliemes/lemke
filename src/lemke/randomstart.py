@@ -35,8 +35,10 @@ def roundArray(x, accuracy=10000):
     Round each entry of an array of probabilities `x`
     to the nearest multiple of 1 / `accuracy`.
     """
+    if not isinstance(accuracy, int):
+        raise TypeError(f"accuracy must be an integer, got {type(accuracy).__name__}")
     if not 1 <= accuracy <= MAX_ACCURACY:
-        raise ValueError(f"accuracy must be between 1 and {MAX_ACCURACY}")
+        raise ValueError(f"accuracy must be between 1 and {MAX_ACCURACY}, got {accuracy}")
 
     n = len(x)
     sum = 0
