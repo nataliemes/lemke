@@ -63,7 +63,7 @@ def tofraction(s: str, decimals: int) -> fractions.Fraction:
     """
     if not isinstance(s, str):
         raise TypeError(
-            f"to_fraction expects a string, got {type(s).__name__}: {s!r}"
+            f"tofraction expects a string, got {type(s).__name__}: {s!r}"
         )
 
     if "." in s:
