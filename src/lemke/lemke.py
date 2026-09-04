@@ -342,8 +342,9 @@ class tableau:
 class RayTermination(Exception):
     def __init__(self, enter, tableau):
         self.tableau = tableau
+        self.enter = tableau.vartoa(enter)
         super().__init__(
-            "Ray termination when trying to enter " + tableau.vartoa(enter)
+            "Ray termination when trying to enter " + self.enter
         )
 
 
@@ -465,6 +466,7 @@ class LcpResult:
     z0: fractions.Fraction
     z: tuple[fractions.Fraction, ...]  # (z1, ..., zn)
     w: tuple[fractions.Fraction, ...]  # (w1, ..., wn)
+    ray_entering_variable: str | None
 
     def __str__(self):
         pivot_word = "pivot" if self.num_pivots == 1 else "pivots"
@@ -476,7 +478,8 @@ class LcpResult:
             )
         else:
             status = (
-                f"Terminated on a secondary ray after {self.num_pivots} {pivot_word}.\n"
+                f"Terminated on a secondary ray after {self.num_pivots} {pivot_word}, "
+                f"when trying to enter {self.ray_entering_variable}.\n"
                 "Current basis not an LCP solution:\n"
             )
 
@@ -507,6 +510,7 @@ class LcpResult:
 def result_from_tableau(
     tableau: tableau,
     success: bool,
+    ray_entering_variable: str | None = None,
 ) -> LcpResult:
     n = tableau.n
     basis = set()
@@ -535,6 +539,7 @@ def result_from_tableau(
         z0=solution[0],
         z=tuple(solution[1:n + 1]),
         w=tuple(solution[n + 1:]),
+        ray_entering_variable=ray_entering_variable,
     )
 
 
@@ -550,6 +555,7 @@ def runlemke(*, lcp, callback=None):
             z0=fractions.Fraction(0),
             z=(fractions.Fraction(0),) * lcp.n,
             w=tuple(lcp.q),
+            ray_entering_variable=None,
         )
 
     try:
@@ -593,7 +599,11 @@ def runlemke(*, lcp, callback=None):
 
         return result
     except RayTermination as e:
-        result = result_from_tableau(e.tableau, False)
+        result = result_from_tableau(
+            tableau=e.tableau,
+            success=False,
+            ray_entering_variable=e.enter,
+        )
         callback.on_ray_termination(message=str(e), result=result, tableau=e.tableau)
         return result
 
