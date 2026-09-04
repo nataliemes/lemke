@@ -34,6 +34,12 @@ def roundArray(x, accuracy=10000):
     """
     Round each entry of an array of probabilities `x`
     to the nearest multiple of 1 / `accuracy`.
+
+    The probabilities are multiplied by `accuracy`, then rounded down to their integer parts,
+    which will be the numerators, augmented by 1 in order of decreasing size of the remainders
+    (which are less than 1) until they sum to `accuracy`.
+
+    Example: accuracy=10, x=[0.18, .35, .47] becomes [2/10, 3/10, 5/10].
     """
     if not isinstance(accuracy, int):
         raise TypeError(f"accuracy must be an integer, got {type(accuracy).__name__}")
