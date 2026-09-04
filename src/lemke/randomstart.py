@@ -139,7 +139,7 @@ def plot_simplex(numpoints=200, accuracy=20, higherdim=3, naiveplot=False):
         plt.plot([x], [y], "g.")
     for circ in roundedpoints:
         x, y = maptotriangle(circ)
-        plt.scatter([x], [y], s=10000 // accuracy, facecolors="none",
+        plt.scatter([x], [y], s=max(20, 10000 // accuracy), facecolors="none",
                     edgecolors="r")
     plt.show()
 
