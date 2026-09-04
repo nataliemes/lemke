@@ -81,12 +81,16 @@ class payoffmatrix:
 
     # add full row, row must be of size n
     def addrow(self, row):
+        if not all(isinstance(x, fractions.Fraction) for x in row):
+            raise TypeError("New row must contain only Fraction values")
         self.matrix = np.vstack([self.matrix, row])
         self.numrows += 1
         self.updatemaxmin(self.numrows - 1, 0)
 
     # add full column, col must be of size m
     def addcolumn(self, col):
+        if not all(isinstance(x, fractions.Fraction) for x in col):
+            raise TypeError("New column must contain only Fraction values")
         self.matrix = np.column_stack([self.matrix, col])
         self.numcolumns += 1
         self.updatemaxmin(0, self.numcolumns - 1)
