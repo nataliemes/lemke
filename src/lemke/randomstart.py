@@ -111,8 +111,10 @@ def plot_simplex(numpoints=200, accuracy=20, higherdim=3, naiveplot=False):
     ValueError
         If `accuracy` or `higherdim` is out of range.
     """
+    if not isinstance(higherdim, int):
+        raise TypeError(f"higherdim must be an integer, got {type(higherdim).__name__}")
     if not 3 <= higherdim <= 10:
-        raise ValueError("higherdim must be between 3 and 10")
+        raise ValueError(f"higherdim must be between 3 and 10, got {higherdim}")
     print(
         f"numpoints={numpoints} accuracy={accuracy} higherdim={higherdim} naiveplot={naiveplot}"
     )
