@@ -24,34 +24,34 @@ import pygambit
 import pytest
 
 from lemke import randomstart
-from lemke.bimatrix import bimatrix, uniform
+from lemke.bimatrix import Bimatrix, _uniform
 
 FIXTURES_DIR = Path("tests/fixtures/bimatrix")
 
 
-def lh_solver(G: bimatrix) -> list[list[Fr]]:
+def lh_solver(game: Bimatrix) -> list[list[Fr]]:
     """Run LH algorithm & return the list of equilibria found."""
 
-    lh_eqs_dict = G.LH("1-" + str(G.A.numrows + G.A.numcolumns))
+    lh_eqs_dict = game.lh("1-" + str(game.A.num_rows + game.A.num_columns))
     return [list(eq_key) for eq_key in lh_eqs_dict]
 
 
-def trace_uniform_prior(game: bimatrix) -> list[list[Fr]]:
+def trace_uniform_prior(game: Bimatrix) -> list[list[Fr]]:
     """Copied from bimatrix.py, but explicitly returns equilibria."""
 
-    m = game.A.numrows
-    n = game.A.numcolumns
+    m = game.A.num_rows
+    n = game.A.num_columns
 
-    xprior = uniform(m)
-    yprior = uniform(n)
-    eq = game.runtrace(xprior, yprior)
+    xprior = _uniform(m)
+    yprior = _uniform(n)
+    eq = game._run_trace(xprior, yprior)
 
     return [list(eq)]
 
 
 # trace = 10, seed = 0
 def trace_random_priors(
-    game: bimatrix,
+    game: Bimatrix,
     trace,
     seed=None,
     accuracy=1000,
@@ -60,18 +60,18 @@ def trace_random_priors(
 
     if trace <= 0:
         raise ValueError("Number of priors must be a positive integer")
-    m = game.A.numrows
-    n = game.A.numcolumns
+    m = game.A.num_rows
+    n = game.A.num_columns
     trset = {}  # dict of equilibria, how often found
 
     for k in range(trace):
         if seed is not None:
             random.seed(10 * trace * seed + k)
-        x = randomstart.randInSimplex(m)
-        xprior = randomstart.roundArray(x, accuracy)
-        y = randomstart.randInSimplex(n)
-        yprior = randomstart.roundArray(y, accuracy)
-        eq = game.runtrace(xprior, yprior)
+        x = randomstart._rand_in_simplex(m)
+        xprior = randomstart._round_array(x, accuracy)
+        y = randomstart._rand_in_simplex(n)
+        yprior = randomstart._round_array(y, accuracy)
+        eq = game._run_trace(xprior, yprior)
         if eq in trset:
             trset[eq] += 1
         else:
@@ -80,10 +80,10 @@ def trace_random_priors(
     return [list(eq) for eq in trset]
 
 
-def build_pygambit_bimatrix_game(G: bimatrix) -> pygambit.Game:
-    A = G.A.matrix
-    B = G.B.matrix
-    g = pygambit.Game.new_table([G.A.numrows, G.A.numcolumns])
+def build_pygambit_bimatrix_game(game: Bimatrix) -> pygambit.Game:
+    A = game.A.matrix
+    B = game.B.matrix
+    g = pygambit.Game.new_table([game.A.num_rows, game.A.num_columns])
     p1, p2 = g.players
     for i, row in enumerate(A):
         for j, val in enumerate(row):
@@ -94,7 +94,7 @@ def build_pygambit_bimatrix_game(G: bimatrix) -> pygambit.Game:
 
 @dataclasses.dataclass
 class GameTestCase:
-    factory: typing.Callable[[], bimatrix]
+    factory: typing.Callable[[], Bimatrix]
     expected: list[list[Fr]] | None = None
     regret_tol: Fr = Fr(0)
     prob_tol: Fr = Fr(0)
@@ -103,7 +103,7 @@ class GameTestCase:
 UNIQUE_PURE_NE_CASES = [
     pytest.param(
             GameTestCase(
-                factory=lambda: bimatrix.from_file(
+                factory=lambda: Bimatrix.from_file(
                     FIXTURES_DIR / "unique_pure_single_strategy_1x1"
                 ),
                 expected=[[Fr(1), Fr(1)]],
@@ -113,7 +113,7 @@ UNIQUE_PURE_NE_CASES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "unique_pure_single_strategy_1x2"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "unique_pure_single_strategy_1x2"),
             expected=[[Fr(1), Fr(0), Fr(1)]],
         ),
         id="unique_pure_single_strategy_1x2",
@@ -121,7 +121,7 @@ UNIQUE_PURE_NE_CASES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(
+            factory=lambda: Bimatrix.from_file(
                 FIXTURES_DIR / "unique_pure_dominant_prisoners_dilemma"
             ),
             expected=[[Fr(0), Fr(1), Fr(0), Fr(1)]]
@@ -134,7 +134,7 @@ UNIQUE_PURE_NE_CASES = [
 UNIQUE_MIXED_NE_CASES = [
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "unique_mixed_matching_pennies"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "unique_mixed_matching_pennies"),
             expected=[[Fr(1, 2), Fr(1, 2), Fr(1, 2), Fr(1, 2)]],
         ),
         id="unique_mixed_matching_pennies",
@@ -142,7 +142,7 @@ UNIQUE_MIXED_NE_CASES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "unique_mixed_rock_paper_scissors"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "unique_mixed_rock_paper_scissors"),
             expected=[[Fr(1, 3), Fr(1, 3), Fr(1, 3), Fr(1, 3), Fr(1, 3), Fr(1, 3)]],
         ),
         id="unique_mixed_rock_paper_scissors",
@@ -153,14 +153,14 @@ UNIQUE_MIXED_NE_CASES = [
 MULTIPLE_FINITE_NE_CASES = [
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "multiple_finite_pure_coordination"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "multiple_finite_pure_coordination"),
         ),
         id="multiple_finite_pure_coordination",
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(
+            factory=lambda: Bimatrix.from_file(
                 FIXTURES_DIR / "multiple_finite_battle_of_the_sexes"
             ),
         ),
@@ -169,14 +169,14 @@ MULTIPLE_FINITE_NE_CASES = [
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "multiple_finite_4x2"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "multiple_finite_4x2"),
         ),
         id="multiple_finite_4x2",
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "multiple_finite_3x2"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "multiple_finite_3x2"),
         ),
         id="multiple_finite_3x2",
     ),
@@ -186,14 +186,14 @@ MULTIPLE_FINITE_NE_CASES = [
 INFINITE_NE_CASES = [
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "infinite_equilibria_degenerate_1"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "infinite_equilibria_degenerate_1"),
         ),
         id="infinite_equilibria_degenerate_1",
     ),
 
     pytest.param(
         GameTestCase(
-            factory=lambda: bimatrix.from_file(FIXTURES_DIR / "infinite_equilibria_degenerate_2"),
+            factory=lambda: Bimatrix.from_file(FIXTURES_DIR / "infinite_equilibria_degenerate_2"),
         ),
         id="infinite_equilibria_degenerate_2",
     ),
@@ -219,12 +219,12 @@ CASES += INFINITE_NE_CASES
 @pytest.mark.parametrize("test_case", CASES)
 @pytest.mark.parametrize("solver", SOLVERS)
 def test_with_max_regret(test_case: GameTestCase, solver, subtests):
-    G = test_case.factory()
-    eqs = solver(G)
+    game = test_case.factory()
+    eqs = solver(game)
 
-    m = G.A.numrows
+    m = game.A.num_rows
 
-    pygambit_game = build_pygambit_bimatrix_game(G)
+    pygambit_game = build_pygambit_bimatrix_game(game)
 
     for eq_idx, eq in enumerate(eqs):
         x = eq[:m]
@@ -242,8 +242,8 @@ def test_with_max_regret(test_case: GameTestCase, solver, subtests):
 def test_with_expected_results(test_case: GameTestCase, solver, subtests):
     """Tests both algorithms by comparing the output to the pre-computed unique solution."""
 
-    G = test_case.factory()
-    eqs = solver(G)
+    game = test_case.factory()
+    eqs = solver(game)
 
     with subtests.test("Only one equilibrium"):
         assert len(eqs) == 1
@@ -266,15 +266,15 @@ def test_with_expected_results(test_case: GameTestCase, solver, subtests):
 def test_with_pygambit_enummixed(test_case: GameTestCase, solver, subtests):
     """Tests both algorithms against pygambit solutions."""
 
-    G = test_case.factory()
-    eqs = solver(G)
+    game = test_case.factory()
+    eqs = solver(game)
 
-    g = build_pygambit_bimatrix_game(G)
-    p1, p2 = g.players
+    pygambit_game = build_pygambit_bimatrix_game(game)
+    p1, p2 = pygambit_game.players
 
     # enummixed_solve() is used to get all equilibria
     pygambit_eqs = []
-    for eq in pygambit.nash.enummixed_solve(g, rational=True).equilibria:
+    for eq in pygambit.nash.enummixed_solve(pygambit_game, rational=True).equilibria:
         flat_eq = [s[1] for s in eq[p1]] + [s[1] for s in eq[p2]]
         pygambit_eqs.append([Fr(x) for x in flat_eq])  # convert to Fraction (it's Rational)
 

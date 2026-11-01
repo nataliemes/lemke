@@ -21,34 +21,34 @@ Throughout we use this coordination game:
 Creating a game
 ---------------
 
-A game is represented by the :class:`~lemke.bimatrix.bimatrix` class,
-which contains two :class:`~lemke.bimatrix.payoffmatrix` objects, one per player.
+A game is represented by the :class:`~lemke.bimatrix.Bimatrix` class,
+which contains two :class:`~lemke.bimatrix.PayoffMatrix` objects, one per player.
 A game instance can be created in two ways.
 
 1) From Python
 ~~~~~~~~~~~~~~
 
-First wrap each payoff matrix in a :class:`~lemke.bimatrix.payoffmatrix`,
+First wrap each payoff matrix in a :class:`~lemke.bimatrix.PayoffMatrix`,
 then combine them:
 
 .. doctest::
 
    >>> from fractions import Fraction as F
-   >>> from lemke.bimatrix import bimatrix, payoffmatrix
-   >>> game = bimatrix(
-   ...    A=payoffmatrix([
+   >>> from lemke.bimatrix import Bimatrix, PayoffMatrix
+   >>> game = Bimatrix(
+   ...    A=PayoffMatrix([
    ...       [F(3), F(0)],
    ...       [F(0), F(2)],
    ...    ]),
-   ...    B=payoffmatrix([
+   ...    B=PayoffMatrix([
    ...       [F(2), F(0)],
    ...       [F(0), F(7)],
    ...    ]),
    ... )
-   >>> print(game.A.numrows)
+   >>> print(game.A.num_rows)
    2
 
-A :class:`~lemke.bimatrix.payoffmatrix` also records useful facts about its entries,
+A :class:`~lemke.bimatrix.PayoffMatrix` also records useful facts about its entries,
 for example its largest entry:
 
 .. doctest::
@@ -65,7 +65,7 @@ for example its largest entry:
 ~~~~~~~~~~~~~~
 
 Alternatively, describe the game in a text file and load it with
-:meth:`~lemke.bimatrix.bimatrix.from_file`.
+:meth:`~lemke.bimatrix.Bimatrix.from_file`.
 
 First, create a file such as ``examples/game``::
 
@@ -84,8 +84,8 @@ then load it:
 
 .. doctest::
 
-   >>> game = bimatrix.from_file("examples/game")
-   >>> print(game.A.numrows)
+   >>> game = Bimatrix.from_file("examples/game")
+   >>> print(game.A.num_rows)
    2
 
 See details about how the input file should be formatted on
@@ -97,12 +97,12 @@ Lemke-Howson
 
 The Lemke-Howson algorithm finds one equilibrium for each starting *label*.
 There are :math:`m + n` labels, one for each pure strategy of either player.
-:meth:`~lemke.bimatrix.bimatrix.LH` takes a string saying which labels to
+:meth:`~lemke.bimatrix.Bimatrix.lh` takes a string saying which labels to
 try, for example ``"1-3,7"``. You can also pass ``"1-"`` for all labels:
 
 .. doctest::
 
-   >>> result = game.LH("1-")
+   >>> result = game.lh("1-")
    label 1 found eq (1,0),(1,0)
        supports: [0][0]
    label 2 found eq (0,1),(0,1)
@@ -149,7 +149,7 @@ initial beliefs. The equilibrium found depends on the prior.
 Uniform prior
 ~~~~~~~~~~~~~
 
-:meth:`~lemke.bimatrix.bimatrix.trace_uniform_prior` runs the procedure once
+:meth:`~lemke.bimatrix.Bimatrix.trace_uniform_prior` runs the procedure once
 from the uniform prior, where each player mixes equally over all their
 pure strategies, and prints the equilibrium found:
 
@@ -164,7 +164,7 @@ pure strategies, and prints the equilibrium found:
 Random priors
 ~~~~~~~~~~~~~
 
-:meth:`~lemke.bimatrix.bimatrix.trace_random_priors` runs the procedure from
+:meth:`~lemke.bimatrix.Bimatrix.trace_random_priors` runs the procedure from
 several random priors, to see which equilibria they lead to and how often.
 To make a run reproducible, pass a ``seed``:
 

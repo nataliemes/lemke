@@ -21,7 +21,7 @@ All arithmetic is exact, using rational numbers.
 Creating an LCP
 ---------------
 
-An LCP is represented by the :class:`~lemke.lemke.lcp` class.
+An LCP is represented by the :class:`~lemke.lemke.Lcp` class.
 It can be created in two ways.
 
 Let's consider an LCP, where
@@ -43,8 +43,8 @@ Pass the matrix ``M`` (as a list of its rows) and the vectors ``q`` and ``d``:
 .. doctest::
 
    >>> from fractions import Fraction as F
-   >>> from lemke.lemke import lcp
-   >>> problem = lcp(
+   >>> from lemke.lemke import Lcp
+   >>> problem = Lcp(
    ...    M=[
    ...       [F(1, 2), F(1)],
    ...       [F(-1), F(5, 2)],
@@ -64,7 +64,7 @@ Pass the matrix ``M`` (as a list of its rows) and the vectors ``q`` and ``d``:
 ~~~~~~~~~~~~~~
 
 Alternatively, describe the problem in a text file and load it with
-:meth:`~lemke.lemke.lcp.from_file`.
+:meth:`~lemke.lemke.Lcp.from_file`.
 
 First, create a file such as ``examples/lcp_2x2``::
 
@@ -78,7 +78,7 @@ then load it:
 
 .. doctest::
 
-   >>> problem = lcp.from_file("examples/lcp_2x2")
+   >>> problem = Lcp.from_file("examples/lcp_2x2")
    >>> print(problem.n)
    2
 
@@ -89,16 +89,16 @@ the :doc:`file formats<../file_formats>` page.
 Solving the problem
 -------------------
 
-Pass the problem to :func:`~lemke.lemke.runlemke`:
+Pass the problem to :func:`~lemke.lemke.run_lemke`:
 
 .. doctest::
 
-   >>> from lemke.lemke import runlemke
-   >>> result = runlemke(lcp=problem)
+   >>> from lemke.lemke import run_lemke
+   >>> result = run_lemke(lcp=problem)
    >>> print(result.success)
    True
 
-:func:`~lemke.lemke.runlemke` always returns an :class:`~lemke.lemke.LcpResult`,
+:func:`~lemke.lemke.run_lemke` always returns an :class:`~lemke.lemke.LcpResult`,
 whether or not a solution was found. Its fields are the same in both cases,
 so you must check :attr:`~lemke.lemke.LcpResult.success` field first.
 
@@ -148,7 +148,7 @@ It is still a valid solution. For example:
 
 .. doctest::
 
-   >>> problem = lcp(
+   >>> problem = Lcp(
    ...    M=[
    ...       [F(1), F(0)],
    ...       [F(0), F(1)],
@@ -156,7 +156,7 @@ It is still a valid solution. For example:
    ...    q=[F(-1), F(0)],
    ...    d=[F(1), F(1)],
    ... )
-   >>> result = runlemke(lcp=problem)
+   >>> result = run_lemke(lcp=problem)
    >>> print(result.z)
    (Fraction(1, 1), Fraction(0, 1))
    >>> print(result.w)
@@ -165,7 +165,7 @@ It is still a valid solution. For example:
 Here :math:`z_2 = w_2 = 0`, so the second complementary pair is degenerate.
 Degeneracy is handled by the lexicographic minimum ratio test, which
 prevents the algorithm from cycling. You can inspect how often that test
-was needed with the ``lexstats`` option of the printing callback (see below).
+was needed with the ``lex_stats`` option of the printing callback (see below).
 
 Since in this case it is not clear which variables are basic,
 you can explicitly check the :attr:`~lemke.lemke.LcpResult.basis` field:
@@ -190,12 +190,12 @@ never be non-negative:
 
 .. doctest::
 
-   >>> problem = lcp(
+   >>> problem = Lcp(
    ...   M=[[F(0)]],
    ...   q=[F(-1)],
    ...   d=[F(1)],
    ... )
-   >>> result = runlemke(lcp=problem)
+   >>> result = run_lemke(lcp=problem)
    >>> print(result.success)
    False
    >>> print(result.ray_entering_variable)
@@ -225,15 +225,15 @@ When ``success`` is ``False``:
 Watching the algorithm
 ----------------------
 
-To see what happens at each pivot, pass a callback to :func:`~lemke.lemke.runlemke`.
+To see what happens at each pivot, pass a callback to :func:`~lemke.lemke.run_lemke`.
 The ready-made :class:`~lemke.lemke.PrintingCallback` prints the LCP, the
 tableaus and the chosen leaving and entering variables:
 
 .. doctest::
 
    >>> from lemke.lemke import PrintingCallback
-   >>> problem = lcp.from_file("examples/lcp_2x2")
-   >>> result = runlemke(lcp=problem, callback=PrintingCallback())
+   >>> problem = Lcp.from_file("examples/lcp_2x2")
+   >>> result = run_lemke(lcp=problem, callback=PrintingCallback())
    verbose=False z0=False lexstats=False
    n= 2
    M=
@@ -273,7 +273,7 @@ The options are:
 
 * ``verbose``: print the full tableau after every pivot,
 * ``z0``: print the current value of :math:`z_0` before each pivot,
-* ``lexstats``: print minimum-ratio test statistics at the end,
+* ``lex_stats``: print minimum-ratio test statistics at the end,
 * ``stream``: write to a file-like object instead of ``sys.stdout``.
 
 Writing your own callback
@@ -292,7 +292,7 @@ you can override :func:`~lemke.lemke.LemkeCallback.on_pivot_start`:
    >>> class LogEnteringVariables(LemkeCallback):
    ...    def on_pivot_start(self, tableau, leave, enter):
    ...        print(enter)
-   >>> result = runlemke(lcp=problem, callback=LogEnteringVariables())
+   >>> result = run_lemke(lcp=problem, callback=LogEnteringVariables())
    z0
    z2
    z1
