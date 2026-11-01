@@ -206,13 +206,8 @@ class bimatrix:
     def from_file(cls, filename, decimals=utils.DEFAULT_DECIMALS):
         """Create a bimatrix game from a text file.
 
-        Expects the file format::
-
-            <m> <n>
-            m*n entries of A
-            m*n entries of B
-
-        Blank lines and lines starting with ``#`` are ignored.
+        Read about how input files should be formatted
+        :doc:`here <../file_formats>`.
 
         Parameters
         ----------
@@ -235,25 +230,18 @@ class bimatrix:
             If `decimals` is not an integer.
         ValueError
             If `decimals` is out of range, or a payoff is not a valid number.
-        SystemExit
-            If the number of payoff values in the file is incorrect.
+            If `decimals` is out of range, the file doesn't contain
+            the expected number of values, or contains an invalid number.
 
         Examples
         --------
-        Given a file ``game.txt`` containing::
-            # m,n=
-            2 2
+        Given a file ``examples/game`` containing:
 
-            # A=
-            3 0
-            0 2
-
-            # B=
-            2 0
-            0 7
+        .. literalinclude:: ../../examples/game
+           :language: text
 
         >>> from lemke.bimatrix import bimatrix
-        >>> game = bimatrix.from_file("game.txt")
+        >>> game = bimatrix.from_file("examples/game")
         >>> print(game.A.numrows)
         2
         """
@@ -265,9 +253,10 @@ class bimatrix:
         n = int(words[1])
         needfracs = 2 * m * n
         if len(words) != needfracs + 2:
-            print("in bimatrix file " + repr(filename) + ":")
-            print("m=", m, ", n=", n, ", need", needfracs, "payoffs, got", len(words) - 2)
-            exit(1)
+            raise ValueError(
+                f"in bimatrix file {filename!r}: "
+                f"m={m}, n={n}, need {needfracs} payoffs, got {len(words) - 2}"
+            )
         k = 2
         C = utils.tomatrix(m, n, words, k, decimals)
         A = payoffmatrix(C)
@@ -369,8 +358,17 @@ class bimatrix:
         the list of labels that produced it:
 
         >>> from lemke.bimatrix import bimatrix
-        >>> game = bimatrix.from_file("game.txt")
-        >>> game.LH("1-")
+        >>> game = bimatrix.from_file("examples/game")
+        >>> result = game.LH("1-")
+        label 1 found eq (1,0),(1,0)
+            supports: [0][0]
+        label 2 found eq (0,1),(0,1)
+            supports: [1][1]
+        -------- equilibria found: --------
+        (1,0),(1,0)
+            supports: [0][0] found by labels [1, 3]
+        (0,1),(0,1)
+            supports: [1][1] found by labels [2, 4]
         """
         m = self.A.numrows
         n = self.A.numcolumns
@@ -435,8 +433,12 @@ class bimatrix:
         and print the equilibrium found:
 
         >>> from lemke.bimatrix import bimatrix
-        >>> game = bimatrix.from_file("game.txt")
+        >>> game = bimatrix.from_file("examples/game")
         >>> game.trace_uniform_prior()
+        -------- statistics of equilibria found: --------
+        1 times found (0,1),(0,1)
+            supports: [1][1]
+        1 total priors, 1 equilibria found
         """
         m = self.A.numrows
         n = self.A.numcolumns
@@ -477,8 +479,14 @@ class bimatrix:
         and print the equilibrium found:
 
         >>> from lemke.bimatrix import bimatrix
-        >>> game = bimatrix.from_file("game.txt")
-        >>> game.trace_random_priors(1)
+        >>> game = bimatrix.from_file("examples/game")
+        >>> game.trace_random_priors(1, seed=1)
+        found eq (0,1),(0,1)
+            supports: [1][1] index 1
+        -------- statistics of equilibria found: --------
+        1 times found (0,1),(0,1)
+            supports: [1][1]
+        1 total priors, 1 equilibria found
         """
         if trace <= 0:
             raise ValueError("Number of priors must be a positive integer")
